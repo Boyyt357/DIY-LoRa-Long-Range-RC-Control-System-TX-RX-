@@ -27,10 +27,10 @@
 #define JOY1_Y 35                 // Pitch (ADC)
 #define JOY2_X 32                 // Yaw (ADC)
 #define JOY2_Y 33                 // Throttle (ADC)
-#define SW1_UP_PIN    25
-#define SW1_DOWN_PIN  26
-#define SW2_UP_PIN    27
-#define SW2_DOWN_PIN  14
+#define SW1_UP_PIN 25
+#define SW1_DOWN_PIN 13
+#define SW2_UP_PIN 15
+#define SW2_DOWN_PIN 17
 #define DEADZONE 34               // Deadzone for analog stick readings
 
 // -----------------------------------------------------------------------------
