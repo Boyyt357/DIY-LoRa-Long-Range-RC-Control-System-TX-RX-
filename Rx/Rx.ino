@@ -66,6 +66,34 @@ uint16_t auxValue(uint8_t pos) {
   }
 }
 
+// Map centered stick values (2048=center) to iBUS range with proper centering
+uint16_t mapCenteredStick(uint16_t value, bool invert = false) {
+  // Input: 0-4095 with 2048 as center
+  // Output: 1000-2000 with 1500 as center
+  
+  // Constrain input
+  if (value > 4095) value = 4095;
+  
+  uint16_t result;
+  if (value < 2048) {
+    // Below center: map 0->2048 to 1000->1500
+    result = map(value, 0, 2048, 1000, 1500);
+  } else if (value > 2048) {
+    // Above center: map 2048->4095 to 1500->2000
+    result = map(value, 2048, 4095, 1500, 2000);
+  } else {
+    // Exact center
+    result = 1500;
+  }
+  
+  // Apply inversion if needed (for throttle)
+  if (invert) {
+    result = 3000 - result; // Invert around 1500 center
+  }
+  
+  return result;
+}
+
 // ====== iBUS frame send ======
 void sendIBUS(){
   uint8_t packet[32];
@@ -123,7 +151,6 @@ void processNewData() {
   
   // Protect the access to the volatile shared variable
   noInterrupts();
-  // FIX: Use memcpy to safely copy volatile struct data.
   memcpy(&currentData, (const void*)&receivedData, sizeof(LoraData)); 
   newDataAvailable = false;
   interrupts();
@@ -142,11 +169,11 @@ void processNewData() {
   }
   previousReceiveTime = now;
   
-  // Map joystick raw values (0-4095) to iBUS range (1000-2000)
-  channels[0] = map(currentData.joy1X, 0, 4095, 1000, 2000); // Roll (J1X)
-  channels[1] = map(currentData.joy1Y, 0, 4095, 1000, 2000); // Pitch (J1Y)
-  channels[2] = map(currentData.joy2X, 0, 4095, 1000, 2000); // Yaw (J2X)
-  channels[3] = map(currentData.joy2Y, 0, 4095, 2000, 1000); // Throttle (J2Y)
+  // Map centered joystick values (2048=center) to iBUS range (1500=center)
+  channels[0] = mapCenteredStick(currentData.joy1X, false); // Roll (J1X)
+  channels[1] = mapCenteredStick(currentData.joy1Y, false); // Pitch (J1Y)
+  channels[2] = mapCenteredStick(currentData.joy2X, false); // Yaw (J2X)
+  channels[3] = mapCenteredStick(currentData.joy2Y, true);  // Throttle (J2Y) - inverted
 
   channels[4] = auxValue(currentData.aux1); // AUX1 (switch)
   channels[5] = auxValue(currentData.aux2); // AUX2 (switch)
@@ -160,9 +187,11 @@ void processNewData() {
     int rssi = LoRa.packetRssi();
     float snr = LoRa.packetSnr();
     
-    Serial.printf("[%lu ms] RX OK! Control Hz: %.1f, RSSI: %d, SNR: %.1f\n",
+    Serial.printf("[%lu ms] RX OK! Hz: %.1f, RSSI: %d dBm, SNR: %.1f dB\n",
                   now - startTime, controlHz, rssi, snr);
-    Serial.printf("  iBUS -> R:%u P:%u Y:%u T:%u | A1:%u A2:%u\n",
+    Serial.printf("  Raw: J1X:%u J1Y:%u J2X:%u J2Y:%u\n",
+                  currentData.joy1X, currentData.joy1Y, currentData.joy2X, currentData.joy2Y);
+    Serial.printf("  iBUS: Roll:%u Pitch:%u Yaw:%u Thr:%u | AUX1:%u AUX2:%u\n",
                   channels[0], channels[1], channels[2], channels[3], channels[4], channels[5]);
   }
 }
@@ -191,8 +220,9 @@ void setup(){
   LoRa.onReceive(onReceive);
   LoRa.receive(); 
   
-  Serial.printf("LoRa RX Ready. Freq: %.1f MHz, SF: %d, Failsafe Timeout: %dms\n", 
+  Serial.printf("LoRa RX Ready. Freq: %.1f MHz, SF: %d, Failsafe: %dms\n", 
     (float)LORA_FREQUENCY/1E6, LORA_SF, FAILSAFE_TIMEOUT_MS);
+  Serial.println("Expecting centered stick data (2048=center)\n");
     
   startTime = millis();
   lastReceiveTime = startTime; // Start timer now

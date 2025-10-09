@@ -31,12 +31,12 @@
 #define SW1_DOWN_PIN 13
 #define SW2_UP_PIN 15
 #define SW2_DOWN_PIN 17
-#define DEADZONE 34               // Deadzone for analog stick readings
+#define DEADZONE 0               // Deadzone for analog stick readings
 
 // -----------------------------------------------------------------------------
 // DATA STRUCT (10 bytes total)
 // -----------------------------------------------------------------------------
-// Uses uint16_t for 0-4095 ADC values for efficient packing.
+// Now sends centered values: 2048 = center, 0 = min, 4095 = max
 typedef struct {
   uint16_t joy1X;
   uint16_t joy1Y;
@@ -49,18 +49,61 @@ LoraData sendData;
 
 // Calibration storage
 uint16_t j1x_center, j1y_center, j2x_center, j2y_center;
+uint16_t j1x_min, j1x_max, j1y_min, j1y_max;
+uint16_t j2x_min, j2x_max, j2y_min, j2y_max;
 
 // Timing variables for loop control and debugging
 unsigned long lastSendTime = 0;
 unsigned long startTime = 0;
-unsigned long lastDebugTime = 0; // New timer for limiting debug output
+unsigned long lastDebugTime = 0;
 int packetCount = 0;
 
-// Apply deadzone function
-uint16_t applyDeadzone(uint16_t raw, uint16_t center) {
+// Super basic center stick calibration - just reads current position
+void calibrateSticks() {
+  Serial.println("\n=== STICK CALIBRATION ===");
+  Serial.println("Reading current stick positions as center...");
+  
+  // Simple single read - whatever position sticks are in becomes center
+  j1x_center = analogRead(JOY1_X);
+  j1y_center = analogRead(JOY1_Y);
+  j2x_center = analogRead(JOY2_X);
+  j2y_center = analogRead(JOY2_Y);
+  
+  Serial.println("✓ Center calibration complete!");
+  Serial.printf("  J1X Center: %u\n", j1x_center);
+  Serial.printf("  J1Y Center: %u\n", j1y_center);
+  Serial.printf("  J2X Center: %u\n", j2x_center);
+  Serial.printf("  J2Y Center: %u\n", j2y_center);
+  
+  // Initialize min/max ranges (will be updated during use)
+  j1x_min = j1x_center; j1x_max = j1x_center;
+  j1y_min = j1y_center; j1y_max = j1y_center;
+  j2x_min = j2x_center; j2x_max = j2x_center;
+  j2y_min = j2y_center; j2y_max = j2y_center;
+  
+  Serial.println("=========================\n");
+}
+
+// Apply deadzone and center the value around 2048
+uint16_t processCenteredStick(uint16_t raw, uint16_t center, uint16_t &min_val, uint16_t &max_val) {
+  // Update min/max for adaptive range
+  if (raw < min_val) min_val = raw;
+  if (raw > max_val) max_val = raw;
+  
+  // Apply deadzone
   int16_t diff = (int16_t)raw - (int16_t)center;
-  if (abs(diff) < DEADZONE) return center;
-  return raw;
+  if (abs(diff) < DEADZONE) {
+    return 2048; // Return exact center
+  }
+  
+  // Map to 0-4095 range centered at 2048
+  if (raw < center) {
+    // Below center: map min_val->center to 0->2048
+    return map(raw, min_val, center, 0, 2048);
+  } else {
+    // Above center: map center->max_val to 2048->4095
+    return map(raw, center, max_val, 2048, 4095);
+  }
 }
 
 void setup() {
@@ -80,13 +123,8 @@ void setup() {
   pinMode(SW2_UP_PIN, INPUT);
   pinMode(SW2_DOWN_PIN, INPUT);
 
-  // Auto calibration of joystick centers (takes the initial reading as center)
-  j1x_center = analogRead(JOY1_X);
-  j1y_center = analogRead(JOY1_Y);
-  j2x_center = analogRead(JOY2_X);
-  j2y_center = analogRead(JOY2_Y);
-  Serial.printf("Calibration Centers: J1X=%u, J1Y=%u, J2X=%u, J2Y=%u\n", 
-    j1x_center, j1y_center, j2x_center, j2y_center);
+  // Perform center stick calibration
+  calibrateSticks();
   
   // LoRa setup
   SPI.begin(SCK, MISO, MOSI, SS);
@@ -114,11 +152,16 @@ void loop() {
   if (now - lastSendTime > PACKET_SEND_INTERVAL) {
     lastSendTime = now;
     
-    // 1. Read Inputs with Deadzone and Calibration
-    sendData.joy1X = applyDeadzone(analogRead(JOY1_X), j1x_center);
-    sendData.joy1Y = applyDeadzone(analogRead(JOY1_Y), j1y_center);
-    sendData.joy2X = applyDeadzone(analogRead(JOY2_X), j2x_center);
-    sendData.joy2Y = applyDeadzone(analogRead(JOY2_Y), j2y_center);
+    // 1. Read Inputs with Deadzone and Center Calibration
+    uint16_t raw_j1x = analogRead(JOY1_X);
+    uint16_t raw_j1y = analogRead(JOY1_Y);
+    uint16_t raw_j2x = analogRead(JOY2_X);
+    uint16_t raw_j2y = analogRead(JOY2_Y);
+    
+    sendData.joy1X = processCenteredStick(raw_j1x, j1x_center, j1x_min, j1x_max);
+    sendData.joy1Y = processCenteredStick(raw_j1y, j1y_center, j1y_min, j1y_max);
+    sendData.joy2X = processCenteredStick(raw_j2x, j2x_center, j2x_min, j2x_max);
+    sendData.joy2Y = processCenteredStick(raw_j2y, j2y_center, j2y_min, j2y_max);
     
     // 2. Read Switches
     if (digitalRead(SW1_UP_PIN) == HIGH)        sendData.aux1 = 1;  
@@ -139,9 +182,9 @@ void loop() {
       lastDebugTime = now;
       if (result) {
         packetCount++;
-        Serial.printf("[%lu ms] TX Success. J1X:%u, J1Y:%u, J2X:%u, J2Y:%u | Aux1:%d, Aux2:%d\n",
-          now - startTime, sendData.joy1X, sendData.joy1Y, sendData.joy2X, sendData.joy2Y, 
-          sendData.aux1, sendData.aux2);
+        Serial.printf("[%lu ms] TX #%d | J1X:%u J1Y:%u J2X:%u J2Y:%u | Aux1:%d Aux2:%d\n",
+          now - startTime, packetCount, sendData.joy1X, sendData.joy1Y, 
+          sendData.joy2X, sendData.joy2Y, sendData.aux1, sendData.aux2);
       } else {
         Serial.printf("[%lu ms] TX Failed (LoRa busy or error).\n", now - startTime);
       }
