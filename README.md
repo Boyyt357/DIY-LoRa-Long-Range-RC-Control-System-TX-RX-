@@ -34,10 +34,10 @@ The ESP board communicates with the LoRa module using the SPI protocol. Connect 
 | :---- | :---- | :---- |
 | **VCC** | 3.3V | Power (Ensure your module is 3.3V compatible) |
 | **GND** | GND | Ground |
-| **SCK** | GPIO18 | SPI Clock |
+| **SCK** | GPIO5 | SPI Clock |
 | **MISO** | GPIO19 | Master In, Slave Out |
-| **MOSI** | GPIO23 | Master Out, Slave In |
-| **CS** | GPIO5 | Chip Select (SS) |
+| **MOSI** | GPIO27 | Master Out, Slave In |
+| **CS** | GPIO18 | Chip Select (SS) |
 | **RST** | GPIO14 | Reset |
 | **DIO0** | GPIO26 | Interrupt Pin (IRQ) |
 
