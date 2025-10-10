@@ -63,6 +63,11 @@ This custom LoRa link is the ultimate budget option, offering massive customizat
 | **Ease of Use** | Difficult (Requires C++ coding and soldering) | Easy (Plug-and-play modules, Wi-Fi updates, LUA scripts) | Easy (Commercial product) |
 | **Binding/Setup** | Manual (Requires hard-coded IDs in the sketch) | Bind Phrase (Simple, standardized over-the-air binding) | Button/Model Match |
 
+### **Transmitter Wiring**
+<img width="3044" height="1893" alt="transmitter" src="https://github.com/user-attachments/assets/0cf125c5-c24f-4e9e-b3cb-d72bfdb43508" />
+### **Receiver Wiring**
+<img width="3055" height="1608" alt="Reciver" src="https://github.com/user-attachments/assets/d7cb2a0b-7d0f-4bce-a814-c2ed3e2f036d" />
+
 ### **Summary of Comparison**
 
 * **Choose the Custom LoRa System if:** Your primary goal is to **learn** the underlying communication protocol, implement highly custom or non-standard payload data, or achieve the **absolute minimum hardware cost**.  
