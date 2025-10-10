@@ -20,6 +20,14 @@
 #define LORA_BANDWIDTH 125E3      // LoRa Bandwidth (Fixed 125 KHz)
 
 // -----------------------------------------------------------------------------
+// JOYSTICK INVERSION CONFIG (1 = Normal, 2 = Inverted)
+// -----------------------------------------------------------------------------
+#define ROLL_DIRECTION 1          // 1 = Normal (1000-2000), 2 = Inverted (2000-1000)
+#define PITCH_DIRECTION 2         // 1 = Normal (1000-2000), 2 = Inverted (2000-1000)
+#define YAW_DIRECTION 1           // 1 = Normal (1000-2000), 2 = Inverted (2000-1000)
+#define THROTTLE_DIRECTION 2      // 1 = Normal (1000-2000), 2 = Inverted (2000-1000)
+
+// -----------------------------------------------------------------------------
 // IBUS AND FAILSAFE CONFIG
 // -----------------------------------------------------------------------------
 #define IBUS_TX_PIN 17
@@ -66,10 +74,11 @@ uint16_t auxValue(uint8_t pos) {
   }
 }
 
-// Map centered stick values (2048=center) to iBUS range with proper centering
-uint16_t mapCenteredStick(uint16_t value, bool invert = false) {
+// Map centered stick values (2048=center) to iBUS range with optional inversion
+uint16_t mapCenteredStick(uint16_t value, uint8_t direction) {
   // Input: 0-4095 with 2048 as center
   // Output: 1000-2000 with 1500 as center
+  // direction: 1 = Normal (1000-2000), 2 = Inverted (2000-1000)
   
   // Constrain input
   if (value > 4095) value = 4095;
@@ -86,9 +95,9 @@ uint16_t mapCenteredStick(uint16_t value, bool invert = false) {
     result = 1500;
   }
   
-  // Apply inversion if needed (for throttle)
-  if (invert) {
-    result = 3000 - result; // Invert around 1500 center
+  // Apply inversion if direction is 2
+  if (direction == 2) {
+    result = 3000 - result; // Invert around 1500 center (1000↔2000, 1500→1500)
   }
   
   return result;
@@ -170,10 +179,10 @@ void processNewData() {
   previousReceiveTime = now;
   
   // Map centered joystick values (2048=center) to iBUS range (1500=center)
-  channels[0] = mapCenteredStick(currentData.joy1X, false); // Roll (J1X)
-  channels[1] = mapCenteredStick(currentData.joy1Y, false); // Pitch (J1Y)
-  channels[2] = mapCenteredStick(currentData.joy2X, false); // Yaw (J2X)
-  channels[3] = mapCenteredStick(currentData.joy2Y, true);  // Throttle (J2Y) - inverted
+  channels[0] = mapCenteredStick(currentData.joy1X, ROLL_DIRECTION);     // Roll (J1X)
+  channels[1] = mapCenteredStick(currentData.joy1Y, PITCH_DIRECTION);    // Pitch (J1Y)
+  channels[2] = mapCenteredStick(currentData.joy2X, YAW_DIRECTION);      // Yaw (J2X)
+  channels[3] = mapCenteredStick(currentData.joy2Y, THROTTLE_DIRECTION); // Throttle (J2Y)
 
   channels[4] = auxValue(currentData.aux1); // AUX1 (switch)
   channels[5] = auxValue(currentData.aux2); // AUX2 (switch)

@@ -31,7 +31,7 @@
 #define SW1_DOWN_PIN 13
 #define SW2_UP_PIN 15
 #define SW2_DOWN_PIN 17
-#define DEADZONE 0               // Deadzone for analog stick readings
+#define DEADZONE 34               // Deadzone for analog stick readings
 
 // -----------------------------------------------------------------------------
 // DATA STRUCT (10 bytes total)
