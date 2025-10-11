@@ -2,6 +2,9 @@
 
 This project provides an open-source, affordable, and fully customizable remote control (RC) link solution utilizing readily available ESP32/ESP8266 microcontrollers and Semtech LoRa modules. By leveraging the superior sensitivity and interference resilience of LoRa modulation, this system is designed for long-range, hobbyist telemetry, and custom automation tasks where commercial systems might be overkill or lack configuration flexibility.
 
+<img width="1200" height="800" alt="1c691774-9b0a-4870-8643-04b22585c6dc" src="https://github.com/user-attachments/assets/a0e5507d-cbf4-4bf2-bb60-68e9c9b6e2ab" />
+https://youtu.be/mCVtn_sfCrs?si=kKAzGYDWoel_OTza
+
 ## **🚀 Key Features**
 
 | Feature | Description | Notes |
