@@ -93,5 +93,3 @@ This DIY LoRa system is best suited for projects where maximum throughput is les
 4. **Custom Automation (Non-RC):**  
    * **Scenario:** Activating remote gates, controlling farm irrigation pumps, or triggering cameras long distance.  
    * **Benefit:** The system is easily adapted to send simple boolean or custom commands instead of standard 8-channel PWM data.
-
-For a detailed look at setting up ExpressLRS, which shares much of the same LoRa hardware foundation but is commercially optimized, check out [Why... Do I use FrSky R9?](https://www.youtube.com/watch?v=1M8ZKyhaQjY).
